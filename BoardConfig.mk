@@ -16,6 +16,8 @@
 # inherit from common msm8226-common
 -include device/motorola/msm8226-common/BoardConfigCommon.mk
 
+PRODUCT_PREBUILT_WEBVIEWCHROMIUM := yes
+
 LOCAL_PATH := device/motorola/falcon
 
 # Assert
