@@ -46,6 +46,10 @@ on boot
     chown system system /sys/module/ct406/parameters/als_delay
     chmod 0660 /sys/module/ct406/parameters/als_delay
 
+    # Double-tap to wake
+    chown system system /sys/devices/f9927000.i2c/i2c-5/5-0020/wake_gesture_enabled
+    chmod 0660 /sys/devices/f9927000.i2c/i2c-5/5-0020/wake_gesture_enabled
+
 # Services start here
 
 service akmd8963 /system/bin/akmd8963
