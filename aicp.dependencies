@@ -18,5 +18,5 @@
 "repository": "CyanogenMod/android_external_sony_boringssl-compat",
 "target_path": "external/sony/boringssl-compat",
 "branch": "cm-13.0"
-},
+}
 ]
