@@ -37,59 +37,16 @@
 #include "log.h"
 #include "util.h"
 
-#define ISMATCH(a,b)    (!strncmp(a,b,PROP_VALUE_MAX))
-
-enum supported_carrier {
-    UNKNOWN = -1,
-    VERIZON,
-    SPRINT,
-    BOOST,
-    USC,
-};
-
-static enum supported_carrier detect_sprint_mvno(void)
-{
-    std::ifstream propFile("/persist/prop/ro_cust.prop");
-    std::string line;
-
-    while (std::getline(propFile, line)) {
-        if (line.find("ro.home.operator.carrierid=BOOST") != std::string::npos)
-            return BOOST;
-    }
-
-    return SPRINT;
-}
-
-static enum supported_carrier detect_carrier(void)
-{
-    char carrier[PROP_VALUE_MAX];
-
-    property_get("ro.boot.carrier", carrier);
-    if (ISMATCH(carrier, "vzw")) {
-        return VERIZON;
-    } else if (access("/pds/public/usc", F_OK) != -1) {
-        return USC;
-    } else if (access("/persist/prop/ro_cust.prop", F_OK) != -1) {
-        return detect_sprint_mvno();
-    }
-
-    return UNKNOWN;
-}
-
 void vendor_load_properties()
 {
-    char platform[PROP_VALUE_MAX];
-    char radio[PROP_VALUE_MAX];
-    char device[PROP_VALUE_MAX];
-    int rc;
-
-    rc = property_get("ro.board.platform", platform);
-    if (!rc || !ISMATCH(platform, ANDROID_TARGET))
+    std::string platform = property_get("ro.board.platform");
+    if (platform != ANDROID_TARGET)
         return;
-    property_get("ro.boot.radio", radio);
 
     property_set("ro.product.model", "Moto G");
-    if (ISMATCH(radio, "0x1")) {
+
+    std::string radio = property_get("ro.boot.radio");
+    if (radio == "0x1") {
         if (access("/dev/block/platform/msm_sdcc.1/by-name/metadata", F_OK) != -1) {
             /* xt1032 GPE */
             property_set("ro.product.device", "falcon_gpe");
@@ -109,9 +66,9 @@ void vendor_load_properties()
             property_set("ro.telephony.default_network", "0");
             property_set("persist.radio.multisim.config", "");
         }
-    } else if (ISMATCH(radio, "0x3")) {
-        switch (detect_carrier()) {
-        case VERIZON:
+    } else if (radio == "0x3") {
+        std::string carrier = property_get("ro.boot.carrier");
+        if (carrier == "vzw") {
             property_set("ro.build.description", "falcon_verizon-user 5.1 LPB23.13-33.7 7 release-keys");
             property_set("ro.build.fingerprint", "motorola/falcon_verizon/falcon_cdma:5.1/LPB23.13-33.7/7:user/release-keys");
             property_set("ro.mot.build.customerid", "verizon");
@@ -121,18 +78,7 @@ void vendor_load_properties()
             property_set("ro.com.google.clientidbase.am", "android-verizon");
             property_set("ro.com.google.clientidbase.yt", "android-verizon");
             property_set("persist.radio.nw_mtu_enabled", "true");
-            break;
-        case SPRINT:
-            property_set("ro.build.description", "falcon_boost-user 5.1 LPB23.13-56 55 release-keys");
-            property_set("ro.build.fingerprint", "motorola/falcon_boost/falcon_cdma:5.1/LPB23.13-56/55:user/release-keys");
-            property_set("ro.mot.build.customerid", "sprint");
-            property_set("ro.cdma.home.operator.alpha", "Chameleon");
-            property_set("ro.cdma.home.operator.numeric", "310000");
-            property_set("ro.com.google.clientidbase.ms", "android-sprint-mvno-us");
-            property_set("ro.com.google.clientidbase.am", "android-sprint-mvno-us");
-            property_set("ro.com.google.clientidbase.yt", "android-sprint-mvno-us");
-            break;
-        case BOOST:
+        } else if (carrier == "boost") {
             property_set("ro.build.description", "falcon_boost-user 5.1 LPB23.13-56 55 release-keys");
             property_set("ro.build.fingerprint", "motorola/falcon_boost/falcon_cdma:5.1/LPB23.13-56/55:user/release-keys");
             property_set("ro.mot.build.customerid", "sprint");
@@ -141,8 +87,7 @@ void vendor_load_properties()
             property_set("ro.com.google.clientidbase.ms", "android-boost-us");
             property_set("ro.com.google.clientidbase.am", "android-boost-us");
             property_set("ro.com.google.clientidbase.yt", "android-boost-us");
-            break;
-        case USC:
+        } else if (carrier == "usc") {
             property_set("ro.build.description", "falcon_usc-user 5.1 LPB23.13-33.6 8 release-keys");
             property_set("ro.build.fingerprint", "motorola/falcon_usc/falcon_cdma:5.1/LPB23.13-33.6/8:user/release-keys");
             property_set("ro.mot.build.customerid", "usc");
@@ -154,8 +99,7 @@ void vendor_load_properties()
             property_set("ro.com.google.clientidbase", "android-motorola");
             property_set("ro.com.google.clientidbase.gmm", "android-motorola");
             property_set("ro.com.google.clientidbase.yt", "android-motorola");
-            break;
-        default:
+        } else {
             ERROR("Unknown mobile carrier");
         }
         property_set("ro.product.device", "falcon_cdma");
@@ -178,7 +122,7 @@ void vendor_load_properties()
         property_set("ro.gsm.data_retry_config", "default_randomization=2000,max_retries=infinite,1000,1000,80000,125000,485000,905000");
         property_set("ro.mot.ignore_csim_appid", "true");
         property_set("telephony.lteOnCdmaDevice", "0");
-    } else if (ISMATCH(radio, "0x5")) {
+    } else if (radio == "0x5") {
         /* xt1033 */
         property_set("ro.product.device", "falcon_umtsds");
         property_set("ro.build.description", "falcon_retbr_ds-user 5.1 LPB23.13-56 58 release-keys");
@@ -190,7 +134,7 @@ void vendor_load_properties()
         property_set("persist.radio.multisim.config", "dsds");
         property_set("persist.radio.dont_use_dsd", "true");
         property_set("persist.radio.plmn_name_cmp", "1");
-    } else if (ISMATCH(radio, "0x6")) {
+    } else if (radio == "0x6") {
         /* xt1034 */
         property_set("ro.product.device", "falcon_umts");
         property_set("ro.build.description", "falcon_retuaws-user 5.1 LPB23.13-58 61 release-keys");
@@ -201,6 +145,6 @@ void vendor_load_properties()
         property_set("persist.radio.multisim.config", "");
     }
 
-    property_get("ro.product.device", device);
-    INFO("Found radio id: %s, setting build properties for %s device\n", radio, device);
+    std::string device = property_get("ro.product.device");
+    INFO("Found radio id: %s, setting build properties for %s device\n", radio.c_str(), device.c_str());
 }
